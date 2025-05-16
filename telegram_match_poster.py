@@ -1,6 +1,7 @@
 import requests
 import json
 from datetime import datetime, timedelta
+from pytz import timezone
 import time
 import random
 import logging
@@ -281,12 +282,12 @@ def main():
     }
 
     # Get yesterday's date
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday = (datetime.now(timezone('Africa/Nairobi')) - timedelta(days=1)).strftime("%Y-%m-%d")
     yesterday_matches = filter_matches_by_date(json_data, yesterday)
     congrats_message = check_yesterday_results(yesterday_matches)
 
     # Get today's matches
-    todays_matches = filter_matches_by_date(json_data, datetime.now().strftime("%Y-%m-%d"))
+    todays_matches = filter_matches_by_date(json_data, datetime.now(timezone('Africa/Nairobi')).strftime("%Y-%m-%d"))
     
     message_parts = []
     if congrats_message:

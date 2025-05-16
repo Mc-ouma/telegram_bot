@@ -1,6 +1,6 @@
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import random
 import logging
@@ -17,7 +17,7 @@ API_URL = "${{API_URL}}"  # Use Railway environment variable
 BOT_TOKEN = "${{BOT_TOKEN}}"  # Use Railway environment variable
 CHANNEL_ID = "${{CHANNEL_ID}}"  # Use Railway environment variable
 INTERVAL = 86400  # Post once per day (86400 seconds)
-MORE_MATCHES_LINK = "https://groups.google.com/u/0/g/ai-scorecast"  # Replace with your link
+MORE_MATCHES_LINK = "https://yourwebsite.com/matches"  # Replace with your link
 
 def fetch_data():
     """
@@ -36,18 +36,38 @@ def fetch_data():
         logging.error(f"Error fetching data: {e}")
         return None
 
-def filter_todays_matches(data):
+def filter_matches_by_date(data, target_date):
     """
-    Filters matches for today's date.
-    Returns a list of matches for today.
+    Filters matches for the specified date.
+    Returns a list of matches for the target date.
     """
-    today = datetime.now().strftime("%Y-%m-%d")
     if not data or "server_response" not in data:
         logging.warning("No server_response in data")
         return []
-    matches = [match for match in data["server_response"] if match["m_date"] == today]
-    logging.info(f"Found {len(matches)} matches for today")
+    matches = [match for match in data["server_response"] if match["m_date"] == target_date]
+    logging.info(f"Found {len(matches)} matches for {target_date}")
     return matches
+
+def check_yesterday_results(matches):
+    """
+    Checks the results of yesterday's matches.
+    Returns a congratulatory message if all or >80% of matches were won, else None.
+    """
+    if not matches:
+        logging.info("No matches found for yesterday")
+        return None
+
+    total_matches = len(matches)
+    won_matches = sum(1 for match in matches if match["outcome"].lower() == "win")
+    win_percentage = (won_matches / total_matches) * 100 if total_matches > 0 else 0
+
+    logging.info(f"Yesterday: {won_matches}/{total_matches} matches won ({win_percentage:.2f}%)")
+
+    if won_matches == total_matches:
+        return "🎉 **Perfect Day!** All of yesterday's picks were winners! Keep riding the wave! 🚀"
+    elif win_percentage > 80:
+        return f"🥳 **Amazing Day!** {won_matches}/{total_matches} of yesterday's picks won ({win_percentage:.2f}%)! Let's keep it going! 💪"
+    return None
 
 def format_match(match):
     """
@@ -98,12 +118,80 @@ def send_message(text):
 
 def main():
     """
-    Main function to fetch, filter, select 3 random matches, format, and post today's matches.
+    Main function to check yesterday's results, then fetch, filter, select 3 random matches, format, and post today's matches.
     """
     logging.info("Starting main function")
     # For testing, use provided JSON data
     json_data = {
         "server_response": [
+            {
+                "m_time": "17:30",
+                "pick": "1",
+                "country": "Iran",
+                "league": "Iran - Persian Gulf Pro League",
+                "m_date": "2025-05-15",
+                "home_team": "Persepolis FC",
+                "away_team": "Havadar",
+                "bet_odds": "",
+                "outcome": "win",
+                "result": "2 - 0",
+                "h_logo_path": "https://media.api-sports.io/football/teams/2742.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/15541.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/290.png",
+                "fixture_id": "1371668",
+                "m_status": "FT"
+            },
+            {
+                "m_time": "21:00",
+                "pick": "2",
+                "country": "Saudi-Arabia",
+                "league": "Saudi-Arabia - Pro League",
+                "m_date": "2025-05-15",
+                "home_team": "Al-Raed",
+                "away_team": "Al-Ittihad FC",
+                "bet_odds": "",
+                "outcome": "win",
+                "result": "1 - 3",
+                "h_logo_path": "https://media.api-sports.io/football/teams/2935.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/2938.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/307.png",
+                "fixture_id": "1252700",
+                "m_status": "FT"
+            },
+            {
+                "m_time": "14:45",
+                "pick": "Over 2.5",
+                "country": "Singapore",
+                "league": "Singapore - Premier League",
+                "m_date": "2025-05-15",
+                "home_team": "Young Lions",
+                "away_team": "Geylang International",
+                "bet_odds": "",
+                "outcome": "win",
+                "result": "1 - 2",
+                "h_logo_path": "https://media.api-sports.io/football/teams/4208.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/4203.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/368.png",
+                "fixture_id": "1196675",
+                "m_status": "FT"
+            },
+            {
+                "m_time": "16:00",
+                "pick": "1",
+                "country": "Kenya",
+                "league": "Kenya - FKF Premier League",
+                "m_date": "2025-05-15",
+                "home_team": "GOR Mahia",
+                "away_team": "Nairobi City Stars",
+                "bet_odds": "",
+                "outcome": "lose",
+                "result": "1 - 2",
+                "h_logo_path": "https://media.api-sports.io/football/teams/2467.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/2482.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/276.png",
+                "fixture_id": "1303840",
+                "m_status": "FT"
+            },
             {
                 "m_time": "21:00",
                 "pick": "Over 1.5",
@@ -159,7 +247,7 @@ def main():
                 "m_time": "21:30",
                 "pick": "2",
                 "country": "Austria",
-                "league": "Austria - 2. Liga",
+                "league": "Australia - 2. Liga",
                 "m_date": "2025-05-16",
                 "home_team": "Schwarz-WeiSs Bregenz",
                 "away_team": "Ried",
@@ -192,21 +280,31 @@ def main():
         ]
     }
 
-    todays_matches = filter_todays_matches(json_data)
+    # Get yesterday's date
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    yesterday_matches = filter_matches_by_date(json_data, yesterday)
+    congrats_message = check_yesterday_results(yesterday_matches)
+
+    # Get today's matches
+    todays_matches = filter_matches_by_date(json_data, datetime.now().strftime("%Y-%m-%d"))
     
+    message_parts = []
+    if congrats_message:
+        message_parts.append(congrats_message + "\n\n")
+
     if not todays_matches:
-        message = f"⚽ No matches scheduled for today ({datetime.now().strftime('%Y-%m-%d')}). Check back tomorrow! ⚽"
-        send_message(message)
+        message_parts.append(f"⚽ No matches scheduled for today ({datetime.now().strftime('%Y-%m-%d')}). Check back tomorrow! ⚽")
     else:
-        # Select 3 random matches
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
         formatted_matches = [format_match(match) for match in selected_matches]
-        message = (
+        message_parts.append(
             f"⚽ **Today's Top Matches ({datetime.now().strftime('%Y-%m-%d')})** ⚽\n\n"
             + "\n\n".join(formatted_matches)
             + f"\n\n🔗 [Check More Matches]({MORE_MATCHES_LINK})"
         )
-        send_message(message)
+
+    message = "".join(message_parts)
+    send_message(message)
 
 # Run the script periodically
 if __name__ == "__main__":

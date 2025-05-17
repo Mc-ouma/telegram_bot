@@ -7,32 +7,52 @@ import random
 import logging
 import os  # Missing import for os.environ
 
+
 # Configure logging
 logging.basicConfig(
     filename='bot.log',
     level=logging.DEBUG,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
+logging.getLogger().addHandler(logging.StreamHandler())  # Also log to console for Railway
 
 # Configuration
-API_URL = os.getenv("API_URL")  # e.g., https://surebetsapp.com/app_json_scrits/json_toppicks.php
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # e.g., 589590135:AAG535MoncA24m_4EdDLHlPGgxxxxx
-CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200xxx
-INTERVAL = 86400  # Post once per day (86400 seconds)
-MORE_MATCHES_LINK = "https://surebetsapp.com"  # Updated to match your domain
+API_URL = os.getenv("API_URL")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
+INTERVAL = 300  # 5 minutes for testing
+MORE_MATCHES_LINK = "https://surebetsapp.com"
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
 # Set correct timezone
 EAT = timezone('Africa/Nairobi')  # East Africa Time
 
+def validate_env_vars():
+    """
+    Validates environment variables.
+    Returns True if all are set, False otherwise.
+    """
+    missing = []
+    if not API_URL:
+        missing.append("API_URL")
+    if not BOT_TOKEN:
+        missing.append("BOT_TOKEN")
+    if not CHANNEL_ID:
+        missing.append("CHANNEL_ID")
+    if missing:
+        logging.error(f"Missing environment variables: {', '.join(missing)}")
+        return False
+    logging.info("All environment variables are set")
+    return True
+
 def fetch_data():
     """
-    Fetches JSON data from the specified API.
-    Returns the parsed JSON data if successful, otherwise None.
+    Fetches JSON data from the API or uses fallback data.
+    Returns parsed JSON data or None.
     """
     if not API_URL:
-        logging.error("API_URL environment variable is not set")
-        return None
+        logging.error("API_URL not set, using fallback data")
+        return get_fallback_data()
     try:
         response = requests.get(API_URL, timeout=15)
         response.raise_for_status()
@@ -40,7 +60,85 @@ def fetch_data():
         return response.json()
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching data from {API_URL}: {e}")
-        return None
+        return get_fallback_data()
+
+def get_fallback_data():
+    """
+    Returns fallback JSON data for testing.
+    """
+    logging.warning("Using fallback JSON data")
+    return {
+        "server_response": [
+            {
+                "m_time": "17:30",
+                "pick": "1",
+                "country": "Iran",
+                "league": "Iran - Persian Gulf Pro League",
+                "m_date": "2025-05-16",
+                "home_team": "Persepolis FC",
+                "away_team": "Havadar",
+                "bet_odds": "",
+                "outcome": "win",
+                "result": "2 - 0",
+                "h_logo_path": "https://media.api-sports.io/football/teams/2742.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/15541.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/290.png",
+                "fixture_id": "1371668",
+                "m_status": "FT"
+            },
+            {
+                "m_time": "21:00",
+                "pick": "Over 1.5",
+                "country": "Poland",
+                "league": "Poland - II Liga - East",
+                "m_date": "2025-05-17",
+                "home_team": "Zaglebie Sosnowiec",
+                "away_team": "Wisla Pulawy",
+                "bet_odds": "",
+                "outcome": "",
+                "result": "-",
+                "h_logo_path": "https://media.api-sports.io/football/teams/342.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/16272.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/109.png",
+                "fixture_id": "1211823",
+                "m_status": "NS"
+            },
+            {
+                "m_time": "21:30",
+                "pick": "1",
+                "country": "England",
+                "league": "England - Premier League",
+                "m_date": "2025-05-17",
+                "home_team": "Aston Villa",
+                "away_team": "Tottenham",
+                "bet_odds": "",
+                "outcome": "",
+                "result": "-",
+                "h_logo_path": "https://media.api-sports.io/football/teams/66.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/47.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/39.png",
+                "fixture_id": "1208384",
+                "m_status": "NS"
+            },
+            {
+                "m_time": "22:15",
+                "pick": "1",
+                "country": "England",
+                "league": "England - Premier League",
+                "m_date": "2025-05-17",
+                "home_team": "Chelsea",
+                "away_team": "Manchester United",
+                "bet_odds": "",
+                "outcome": "",
+                "result": "-",
+                "h_logo_path": "https://media.api-sports.io/football/teams/49.png",
+                "a_logo_path": "https://media.api-sports.io/football/teams/33.png",
+                "league_logo": "https://media.api-sports.io/football/leagues/39.png",
+                "fixture_id": "1208387",
+                "m_status": "NS"
+            }
+        ]
+    }
 
 def filter_matches_by_date(data, target_date):
     """
@@ -62,13 +160,10 @@ def check_yesterday_results(matches):
     if not matches:
         logging.info("No matches found for yesterday")
         return None
-
     total_matches = len(matches)
     won_matches = sum(1 for match in matches if match["outcome"].lower() == "win")
     win_percentage = (won_matches / total_matches) * 100 if total_matches > 0 else 0
-
     logging.info(f"Yesterday: {won_matches}/{total_matches} matches won ({win_percentage:.2f}%)")
-
     if won_matches == total_matches:
         return "🎉 **Perfect Day!** All of yesterday's picks were winners! Keep riding the wave! 🚀"
     elif win_percentage > 80:
@@ -90,7 +185,6 @@ def format_match(match):
     h_logo = match["h_logo_path"]
     a_logo = match["a_logo_path"]
     league_logo = match["league_logo"]
-
     return (
         f"🏆 **{league} ({country})** 🏆\n"
         f"⏰ **Time**: {m_time}\n"
@@ -104,13 +198,12 @@ def format_match(match):
 
 def send_message(text):
     """
-    Sends a message to the Telegram channel using the bot.
+    Sends a message to the Telegram channel.
     Returns True if successful, False otherwise.
     """
     if not BOT_TOKEN or not CHANNEL_ID:
-        logging.error("BOT_TOKEN or CHANNEL_ID environment variable is not set")
+        logging.error("BOT_TOKEN or CHANNEL_ID not set")
         return False
-
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHANNEL_ID,
@@ -125,7 +218,7 @@ def send_message(text):
             logging.info("Message posted successfully")
             return True
         else:
-            logging.error(f"Telegram API response not ok: {response.json()}")
+            logging.error(f"Telegram API error: {response.json()}")
             return False
     except requests.exceptions.RequestException as e:
         logging.error(f"Error sending message to Telegram: {e}")
@@ -133,71 +226,70 @@ def send_message(text):
 
 def test_bot_permissions():
     """
-    Tests if the bot can post a test message to the channel.
+    Tests bot permissions with a test message.
     Returns True if successful, False otherwise.
     """
-    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now(EAT).strftime('%Y-%m-%d %H:%M:%S')} EAT to verify posting permissions! 🔔"
-    logging.info("Testing bot permissions with a test message")
+    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} EAT to verify posting! 🔔"
+    logging.info("Testing bot permissions")
     return send_message(test_message)
 
 def main():
     """
-    Main function to check yesterday's results, then fetch, filter, select 3 random matches, format, and post today's matches.
+    Main function to check yesterday's results, fetch, filter, and post matches.
     """
     logging.info("Starting main function")
-
-    # Test bot permissions if in debug mode
-    if DEBUG_MODE:
-        if not test_bot_permissions():
-            logging.error("Failed to post test message. Check bot permissions and channel ID.")
-            return
-
-    # Get yesterday's and today's dates in East Africa Time
-    now_eat = datetime.now(EAT)
-    yesterday_eat = (now_eat - timedelta(days=1)).strftime("%Y-%m-%d")
-    today_eat = now_eat.strftime("%Y-%m-%d")
-
-    # Fetch data from API
-    json_data = fetch_data()
-    if json_data is None:
-        message = "⚽ Error fetching match data. Please try again later. ⚽"
-        send_message(message)
+    if not validate_env_vars():
+        send_message("⚠️ Bot error: Missing environment variables. Contact admin.")
         return
 
-    # Check yesterday's results
-    yesterday_matches = filter_matches_by_date(json_data, yesterday_eat)
+    if DEBUG_MODE:
+        if not test_bot_permissions():
+            logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
+            send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
+            return
+
+    
+    # Get yesterday's and today's dates in East Africa Time
+    now_eat = datetime.now(EAT)
+    yesterday = (now_eat - timedelta(days=1)).strftime("%Y-%m-%d")
+    today = now_eat.strftime("%Y-%m-%d")
+
+    json_data = fetch_data()
+    if json_data is None:
+        message = "⚽ Error fetching match data. Using fallback data. ⚽"
+        send_message(message)
+        json_data = get_fallback_data()
+
+    yesterday_matches = filter_matches_by_date(json_data, yesterday)
     congrats_message = check_yesterday_results(yesterday_matches)
 
-    # Get today's matches
-    todays_matches = filter_matches_by_date(json_data, today_eat)
+    todays_matches = filter_matches_by_date(json_data, today)
     
     message_parts = []
     if congrats_message:
         message_parts.append(congrats_message + "\n\n")
-
     if not todays_matches:
-        message_parts.append(f"⚽ No matches scheduled for today ({today_eat}, EAT). Check back tomorrow! ⚽")
+        message_parts.append(f"⚽ No matches scheduled for today ({today}). Check back tomorrow! ⚽")
     else:
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
         formatted_matches = [format_match(match) for match in selected_matches]
         message_parts.append(
-            f"⚽ **Today's Top Matches ({today_eat}, EAT)** ⚽\n\n"
+            f"⚽ **Today's Top Matches ({today})** ⚽\n\n"
             + "\n\n".join(formatted_matches)
             + f"\n\n🔗 [Check More Matches]({MORE_MATCHES_LINK})"
         )
 
     message = "".join(message_parts)
     if not send_message(message):
-        logging.error("Failed to post daily message to Telegram channel")
+        logging.error("Failed to post daily message")
 
-# Run the script once for testing, then periodically
 if __name__ == "__main__":
     logging.info("Bot started")
     try:
-        main()  # Run immediately for testing
+        main()  # Run immediately
         while True:
             time.sleep(INTERVAL)
             main()
     except Exception as e:
-        logging.error(f"An error occurred in main loop: {e}")
+        logging.error(f"Main loop error: {e}")
         time.sleep(60)

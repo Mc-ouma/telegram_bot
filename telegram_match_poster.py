@@ -6,35 +6,37 @@ import time
 import random
 import logging
 
+
 # Configure logging
 logging.basicConfig(
     filename='bot.log',
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
 
 # Configuration
-API_URL = "${{API_URL}}"  # Use Railway environment variable
-BOT_TOKEN = "${{BOT_TOKEN}}"  # Use Railway environment variable
-CHANNEL_ID = "${{CHANNEL_ID}}"  # Use Railway environment variable
+API_URL = os.getenv("API_URL")  # e.g., https://surebetsapp.com/app_json_scrits/json_toppicks.php
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # e.g., 589590135:AAG535MoncA24m_4EdDLHlPGgxxxxx
+CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200xxx
 INTERVAL = 86400  # Post once per day (86400 seconds)
-MORE_MATCHES_LINK = "https://yourwebsite.com/matches"  # Replace with your link
+MORE_MATCHES_LINK = "https://surebetsapp.com"  # Updated to match your domain
+DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 
 def fetch_data():
     """
     Fetches JSON data from the specified API.
     Returns the parsed JSON data if successful, otherwise None.
     """
+    if not API_URL:
+        logging.error("API_URL environment variable is not set")
+        return None
     try:
-        response = requests.get(API_URL)
-        if response.status_code == 200:
-            logging.info("Successfully fetched data from API")
-            return response.json()
-        else:
-            logging.error(f"Failed to fetch data: {response.status_code}")
-            return None
-    except Exception as e:
-        logging.error(f"Error fetching data: {e}")
+        response = requests.get(API_URL, timeout=15)
+        response.raise_for_status()
+        logging.info(f"Successfully fetched data from {API_URL}")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching data from {API_URL}: {e}")
         return None
 
 def filter_matches_by_date(data, target_date):
@@ -100,7 +102,12 @@ def format_match(match):
 def send_message(text):
     """
     Sends a message to the Telegram channel using the bot.
+    Returns True if successful, False otherwise.
     """
+    if not BOT_TOKEN or not CHANNEL_ID:
+        logging.error("BOT_TOKEN or CHANNEL_ID environment variable is not set")
+        return False
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHANNEL_ID,
@@ -109,211 +116,84 @@ def send_message(text):
         "disable_web_page_preview": False
     }
     try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
+        response = requests.post(url, json=payload, timeout=15)
+        response.raise_for_status()
+        if response.json().get("ok"):
             logging.info("Message posted successfully")
+            return True
         else:
-            logging.error(f"Failed to post message: {response.text}")
-    except Exception as e:
-        logging.error(f"Error sending message: {e}")
+            logging.error(f"Telegram API response not ok: {response.json()}")
+            return False
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending message to Telegram: {e}")
+        return False
+
+def test_bot_permissions():
+    """
+    Tests if the bot can post a test message to the channel.
+    Returns True if successful, False otherwise.
+    """
+    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} to verify posting permissions! 🔔"
+    logging.info("Testing bot permissions with a test message")
+    return send_message(test_message)
 
 def main():
     """
     Main function to check yesterday's results, then fetch, filter, select 3 random matches, format, and post today's matches.
     """
     logging.info("Starting main function")
-    # For testing, use provided JSON data
-    json_data = {
-        "server_response": [
-            {
-                "m_time": "17:30",
-                "pick": "1",
-                "country": "Iran",
-                "league": "Iran - Persian Gulf Pro League",
-                "m_date": "2025-05-15",
-                "home_team": "Persepolis FC",
-                "away_team": "Havadar",
-                "bet_odds": "",
-                "outcome": "win",
-                "result": "2 - 0",
-                "h_logo_path": "https://media.api-sports.io/football/teams/2742.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/15541.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/290.png",
-                "fixture_id": "1371668",
-                "m_status": "FT"
-            },
-            {
-                "m_time": "21:00",
-                "pick": "2",
-                "country": "Saudi-Arabia",
-                "league": "Saudi-Arabia - Pro League",
-                "m_date": "2025-05-15",
-                "home_team": "Al-Raed",
-                "away_team": "Al-Ittihad FC",
-                "bet_odds": "",
-                "outcome": "win",
-                "result": "1 - 3",
-                "h_logo_path": "https://media.api-sports.io/football/teams/2935.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/2938.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/307.png",
-                "fixture_id": "1252700",
-                "m_status": "FT"
-            },
-            {
-                "m_time": "14:45",
-                "pick": "Over 2.5",
-                "country": "Singapore",
-                "league": "Singapore - Premier League",
-                "m_date": "2025-05-15",
-                "home_team": "Young Lions",
-                "away_team": "Geylang International",
-                "bet_odds": "",
-                "outcome": "win",
-                "result": "1 - 2",
-                "h_logo_path": "https://media.api-sports.io/football/teams/4208.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/4203.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/368.png",
-                "fixture_id": "1196675",
-                "m_status": "FT"
-            },
-            {
-                "m_time": "16:00",
-                "pick": "1",
-                "country": "Kenya",
-                "league": "Kenya - FKF Premier League",
-                "m_date": "2025-05-15",
-                "home_team": "GOR Mahia",
-                "away_team": "Nairobi City Stars",
-                "bet_odds": "",
-                "outcome": "lose",
-                "result": "1 - 2",
-                "h_logo_path": "https://media.api-sports.io/football/teams/2467.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/2482.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/276.png",
-                "fixture_id": "1303840",
-                "m_status": "FT"
-            },
-            {
-                "m_time": "21:00",
-                "pick": "Over 1.5",
-                "country": "Poland",
-                "league": "Poland - II Liga - East",
-                "m_date": "2025-05-16",
-                "home_team": "Zaglebie Sosnowiec",
-                "away_team": "Wisla Pulawy",
-                "bet_odds": "",
-                "outcome": "",
-                "result": "-",
-                "h_logo_path": "https://media.api-sports.io/football/teams/342.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/16272.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/109.png",
-                "fixture_id": "1211823",
-                "m_status": "NS"
-            },
-            {
-                "m_time": "21:30",
-                "pick": "1",
-                "country": "England",
-                "league": "England - Premier League",
-                "m_date": "2025-05-16",
-                "home_team": "Aston Villa",
-                "away_team": "Tottenham",
-                "bet_odds": "",
-                "outcome": "",
-                "result": "-",
-                "h_logo_path": "https://media.api-sports.io/football/teams/66.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/47.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/39.png",
-                "fixture_id": "1208384",
-                "m_status": "NS"
-            },
-            {
-                "m_time": "19:00",
-                "pick": "1",
-                "country": "Norway",
-                "league": "Norway - Eliteserien",
-                "m_date": "2025-05-16",
-                "home_team": "Rosenborg",
-                "away_team": "Haugesund",
-                "bet_odds": "",
-                "outcome": "",
-                "result": "-",
-                "h_logo_path": "https://media.api-sports.io/football/teams/331.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/328.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/103.png",
-                "fixture_id": "1342237",
-                "m_status": "NS"
-            },
-            {
-                "m_time": "21:30",
-                "pick": "2",
-                "country": "Austria",
-                "league": "Australia - 2. Liga",
-                "m_date": "2025-05-16",
-                "home_team": "Schwarz-WeiSs Bregenz",
-                "away_team": "Ried",
-                "bet_odds": "",
-                "outcome": "",
-                "result": "-",
-                "h_logo_path": "https://media.api-sports.io/football/teams/8259.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/1028.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/219.png",
-                "fixture_id": "1219918",
-                "m_status": "NS"
-            },
-            {
-                "m_time": "22:15",
-                "pick": "1",
-                "country": "England",
-                "league": "England - Premier League",
-                "m_date": "2025-05-16",
-                "home_team": "Chelsea",
-                "away_team": "Manchester United",
-                "bet_odds": "",
-                "outcome": "",
-                "result": "-",
-                "h_logo_path": "https://media.api-sports.io/football/teams/49.png",
-                "a_logo_path": "https://media.api-sports.io/football/teams/33.png",
-                "league_logo": "https://media.api-sports.io/football/leagues/39.png",
-                "fixture_id": "1208387",
-                "m_status": "NS"
-            }
-        ]
-    }
 
-    # Get yesterday's date
-    yesterday = (datetime.now(timezone('Africa/Nairobi')) - timedelta(days=1)).strftime("%Y-%m-%d")
+    # Test bot permissions if in debug mode
+    if DEBUG_MODE:
+        if not test_bot_permissions():
+            logging.error("Failed to post test message. Check bot permissions and channel ID.")
+            return
+
+    # Get yesterday's and today's dates
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Fetch data from API
+    json_data = fetch_data()
+    if json_data is None:
+        message = "⚽ Error fetching match data. Please try again later. ⚽"
+        send_message(message)
+        return
+
+    # Check yesterday's results
     yesterday_matches = filter_matches_by_date(json_data, yesterday)
     congrats_message = check_yesterday_results(yesterday_matches)
 
     # Get today's matches
-    todays_matches = filter_matches_by_date(json_data, datetime.now(timezone('Africa/Nairobi')).strftime("%Y-%m-%d"))
+    todays_matches = filter_matches_by_date(json_data, today)
     
     message_parts = []
     if congrats_message:
         message_parts.append(congrats_message + "\n\n")
 
     if not todays_matches:
-        message_parts.append(f"⚽ No matches scheduled for today ({datetime.now().strftime('%Y-%m-%d')}). Check back tomorrow! ⚽")
+        message_parts.append(f"⚽ No matches scheduled for today ({today}). Check back tomorrow! ⚽")
     else:
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
         formatted_matches = [format_match(match) for match in selected_matches]
         message_parts.append(
-            f"⚽ **Today's Top Matches ({datetime.now().strftime('%Y-%m-%d')})** ⚽\n\n"
+            f"⚽ **Today's Top Matches ({today})** ⚽\n\n"
             + "\n\n".join(formatted_matches)
             + f"\n\n🔗 [Check More Matches]({MORE_MATCHES_LINK})"
         )
 
     message = "".join(message_parts)
-    send_message(message)
+    if not send_message(message):
+        logging.error("Failed to post daily message to Telegram channel")
 
-# Run the script periodically
+# Run the script once for testing, then periodically
 if __name__ == "__main__":
     logging.info("Bot started")
-    while True:
-        try:
-            main()
+    try:
+        main()  # Run immediately for testing
+        while True:
             time.sleep(INTERVAL)
-        except Exception as e:
-            logging.error(f"An error occurred: {e}")
-            time.sleep(60)  # Wait before retrying
+            main()
+    except Exception as e:
+        logging.error(f"An error occurred in main loop: {e}")
+        time.sleep(60)

@@ -5,7 +5,7 @@ from pytz import timezone
 import time
 import random
 import logging
-
+import os  # Missing import for os.environ
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +21,9 @@ CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200xxx
 INTERVAL = 86400  # Post once per day (86400 seconds)
 MORE_MATCHES_LINK = "https://surebetsapp.com"  # Updated to match your domain
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
+
+# Set correct timezone
+EAT = timezone('Africa/Nairobi')  # East Africa Time
 
 def fetch_data():
     """
@@ -133,7 +136,7 @@ def test_bot_permissions():
     Tests if the bot can post a test message to the channel.
     Returns True if successful, False otherwise.
     """
-    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} to verify posting permissions! 🔔"
+    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now(EAT).strftime('%Y-%m-%d %H:%M:%S')} EAT to verify posting permissions! 🔔"
     logging.info("Testing bot permissions with a test message")
     return send_message(test_message)
 
@@ -149,9 +152,10 @@ def main():
             logging.error("Failed to post test message. Check bot permissions and channel ID.")
             return
 
-    # Get yesterday's and today's dates
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    today = datetime.now().strftime("%Y-%m-%d")
+    # Get yesterday's and today's dates in East Africa Time
+    now_eat = datetime.now(EAT)
+    yesterday_eat = (now_eat - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_eat = now_eat.strftime("%Y-%m-%d")
 
     # Fetch data from API
     json_data = fetch_data()
@@ -161,23 +165,23 @@ def main():
         return
 
     # Check yesterday's results
-    yesterday_matches = filter_matches_by_date(json_data, yesterday)
+    yesterday_matches = filter_matches_by_date(json_data, yesterday_eat)
     congrats_message = check_yesterday_results(yesterday_matches)
 
     # Get today's matches
-    todays_matches = filter_matches_by_date(json_data, today)
+    todays_matches = filter_matches_by_date(json_data, today_eat)
     
     message_parts = []
     if congrats_message:
         message_parts.append(congrats_message + "\n\n")
 
     if not todays_matches:
-        message_parts.append(f"⚽ No matches scheduled for today ({today}). Check back tomorrow! ⚽")
+        message_parts.append(f"⚽ No matches scheduled for today ({today_eat}, EAT). Check back tomorrow! ⚽")
     else:
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
         formatted_matches = [format_match(match) for match in selected_matches]
         message_parts.append(
-            f"⚽ **Today's Top Matches ({today})** ⚽\n\n"
+            f"⚽ **Today's Top Matches ({today_eat}, EAT)** ⚽\n\n"
             + "\n\n".join(formatted_matches)
             + f"\n\n🔗 [Check More Matches]({MORE_MATCHES_LINK})"
         )

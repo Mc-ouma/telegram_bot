@@ -51,7 +51,6 @@ def fetch_data():
         logging.error("API_URL not set, using fallback data")
         return get_fallback_data()
     try:
-        # Add headers if API requires authentication
         headers = {
             "User-Agent": "TelegramBot/1.0",
             # Uncomment and add API key if required
@@ -175,7 +174,7 @@ def check_yesterday_results(matches):
 
 def format_match(match):
     """
-    Formats a match into a beautiful Markdown string.
+    Formats a match into a beautiful Markdown string without logos.
     """
     home_team = match["home_team"]
     away_team = match["away_team"]
@@ -185,9 +184,6 @@ def format_match(match):
     pick = match["pick"]
     result = match["result"] if match["result"] != "-" else "Not Played"
     outcome = match["outcome"].capitalize() if match["outcome"] else "Pending"
-    h_logo = match["h_logo_path"]
-    a_logo = match["a_logo_path"]
-    league_logo = match["league_logo"]
     return (
         f"🏆 **{league} ({country})** 🏆\n"
         f"⏰ **Time**: {m_time} EAT\n"
@@ -195,7 +191,6 @@ def format_match(match):
         f"🎯 **Pick**: {pick}\n"
         f"📊 **Result**: {result}\n"
         f"✅ **Outcome**: {outcome}\n"
-        f"\n[Home Team Logo]({h_logo}) | [Away Team Logo]({a_logo}) | [League Logo]({league_logo})\n"
         f"━━━━━━━━━━━━━━━"
     )
 

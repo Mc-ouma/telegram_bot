@@ -5,8 +5,7 @@ from pytz import timezone
 import time
 import random
 import logging
-import os  # Missing import for os.environ
-
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -14,17 +13,15 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s %(levelname)s: %(message)s'
 )
-logging.getLogger().addHandler(logging.StreamHandler())  # Also log to console for Railway
+logging.getLogger().addHandler(logging.StreamHandler())  # Log to console for Railway
 
 # Configuration
-API_URL = os.getenv("API_URL")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
-INTERVAL = 300  # 5 minutes for testing
+API_URL = os.getenv("API_URL")  # e.g., https://surebetsapp.com/app_json_scrits/json_toppicks.php
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # e.g., 589590135:AAG535MoncA24m_4EdDLHlPGg...
+CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200123
+INTERVAL = 86400  # 24 hours for daily posts
 MORE_MATCHES_LINK = "https://surebetsapp.com"
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
-
-# Set correct timezone
 EAT = timezone('Africa/Nairobi')  # East Africa Time
 
 def validate_env_vars():
@@ -54,7 +51,13 @@ def fetch_data():
         logging.error("API_URL not set, using fallback data")
         return get_fallback_data()
     try:
-        response = requests.get(API_URL, timeout=15)
+        # Add headers if API requires authentication
+        headers = {
+            "User-Agent": "TelegramBot/1.0",
+            # Uncomment and add API key if required
+            # "Authorization": "Bearer your_api_key"
+        }
+        response = requests.get(API_URL, headers=headers, timeout=15)
         response.raise_for_status()
         logging.info(f"Successfully fetched data from {API_URL}")
         return response.json()
@@ -187,7 +190,7 @@ def format_match(match):
     league_logo = match["league_logo"]
     return (
         f"🏆 **{league} ({country})** 🏆\n"
-        f"⏰ **Time**: {m_time}\n"
+        f"⏰ **Time**: {m_time} EAT\n"
         f"⚽ **{home_team}** 🆚 **{away_team}**\n"
         f"🎯 **Pick**: {pick}\n"
         f"📊 **Result**: {result}\n"
@@ -229,7 +232,7 @@ def test_bot_permissions():
     Tests bot permissions with a test message.
     Returns True if successful, False otherwise.
     """
-    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} EAT to verify posting! 🔔"
+    test_message = f"🔔 **Test Message** from your Telegram bot at {datetime.now(EAT).strftime('%Y-%m-%d %H:%M:%S')} EAT to verify posting! 🔔"
     logging.info("Testing bot permissions")
     return send_message(test_message)
 
@@ -248,8 +251,7 @@ def main():
             send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
             return
 
-    
-    # Get yesterday's and today's dates in East Africa Time
+    # Get dates in EAT
     now_eat = datetime.now(EAT)
     yesterday = (now_eat - timedelta(days=1)).strftime("%Y-%m-%d")
     today = now_eat.strftime("%Y-%m-%d")

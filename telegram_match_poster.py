@@ -20,7 +20,7 @@ API_URL = os.getenv("API_URL")  # e.g., https://surebetsapp.com/app_json_scrits/
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # e.g., 589590135:AAG535MoncA24m_4EdDLHlPGg...
 CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200123
 INTERVAL = 86400  # 24 hours for daily posts
-MORE_MATCHES_LINK = "https://surebetsapp.com"
+MORE_MATCHES_LINK = "https://groups.google.com/u/0/g/ai-scorecast"
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 EAT = timezone('Africa/Nairobi')  # East Africa Time
 

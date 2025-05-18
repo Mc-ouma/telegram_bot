@@ -240,11 +240,15 @@ def main():
         send_message("⚠️ Bot error: Missing environment variables. Contact admin.")
         return
 
-    # Test permissions regardless of DEBUG_MODE
-    if not test_bot_permissions():
-        logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
-        send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
-        return
+    # Test permissions only in DEBUG_MODE
+    if DEBUG_MODE:
+        if not test_bot_permissions():
+            logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
+            send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
+            return
+    # In non-DEBUG mode, just log the start without testing permissions
+    else:
+        logging.info("Running in production mode, skipping test message")
 
     # Get dates in EAT
     now_eat = datetime.now(EAT)

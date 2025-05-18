@@ -162,13 +162,27 @@ def check_yesterday_results(matches):
     if not matches:
         logging.info("No matches found for yesterday")
         return None
-    total_matches = len(matches)
-    won_matches = sum(1 for match in matches if match["outcome"].lower() == "win")
+    
+    # Log all match outcomes for debugging
+    for match in matches:
+        logging.info(f"Match: {match.get('home_team', 'Unknown')} vs {match.get('away_team', 'Unknown')}, Outcome: {match.get('outcome', 'Unknown')}")
+    
+    # Only count matches that have outcomes (completed matches)
+    completed_matches = [match for match in matches if match.get("outcome")]
+    if not completed_matches:
+        logging.info("No completed matches found for yesterday")
+        return None
+    
+    total_matches = len(completed_matches)
+    won_matches = sum(1 for match in completed_matches if match.get("outcome", "").lower() == "win")
+    
     win_percentage = (won_matches / total_matches) * 100 if total_matches > 0 else 0
-    logging.info(f"Yesterday: {won_matches}/{total_matches} matches won ({win_percentage:.2f}%)")
-    if won_matches == total_matches:
+    
+    logging.info(f"Yesterday: {won_matches}/{total_matches} completed matches won ({win_percentage:.2f}%)")
+    
+    if won_matches == total_matches and total_matches > 0:
         return "🎉 **Perfect Day!** All of yesterday's picks were winners! Keep riding the wave! 🚀"
-    elif win_percentage > 80:
+    elif win_percentage >= 75 and total_matches > 0:
         return f"🥳 **Amazing Day!** {won_matches}/{total_matches} of yesterday's picks won ({win_percentage:.2f}%)! Let's keep it going! 💪"
     return None
 

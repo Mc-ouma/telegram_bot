@@ -240,11 +240,11 @@ def main():
         send_message("⚠️ Bot error: Missing environment variables. Contact admin.")
         return
 
-    if DEBUG_MODE:
-        if not test_bot_permissions():
-            logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
-            send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
-            return
+    # Test permissions regardless of DEBUG_MODE
+    if not test_bot_permissions():
+        logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
+        send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
+        return
 
     # Get dates in EAT
     now_eat = datetime.now(EAT)

@@ -150,10 +150,10 @@ def filter_matches_by_date(data, target_date):
     if not data or "server_response" not in data:
         logging.warning("No server_response in data")
         return []
-    # For today's matches, exclude those with m_status == "NS"
+    # For today's matches, include only those with m_status == "NS"
     matches = [
         match for match in data["server_response"]
-        if match["m_date"] == target_date and match.get("m_status") != "NS"
+        if match["m_date"] == target_date and match.get("m_status") = "NS"
     ]
     logging.info(f"Found {len(matches)} non-NS matches for {target_date}")
     return matches

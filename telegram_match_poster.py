@@ -76,7 +76,7 @@ def get_fallback_data():
                 "pick": "1",
                 "country": "Iran",
                 "league": "Iran - Persian Gulf Pro League",
-                "m_date": "2025-05-16",
+                "m_date": "2025-05-20",
                 "home_team": "Persepolis FC",
                 "away_team": "Havadar",
                 "bet_odds": "",
@@ -93,7 +93,7 @@ def get_fallback_data():
                 "pick": "Over 1.5",
                 "country": "Poland",
                 "league": "Poland - II Liga - East",
-                "m_date": "2025-05-17",
+                "m_date": "2025-05-21",
                 "home_team": "Zaglebie Sosnowiec",
                 "away_team": "Wisla Pulawy",
                 "bet_odds": "",
@@ -110,7 +110,7 @@ def get_fallback_data():
                 "pick": "1",
                 "country": "England",
                 "league": "England - Premier League",
-                "m_date": "2025-05-17",
+                "m_date": "2025-05-21",
                 "home_team": "Aston Villa",
                 "away_team": "Tottenham",
                 "bet_odds": "",
@@ -123,59 +123,58 @@ def get_fallback_data():
                 "m_status": "NS"
             },
             {
-                "m_time": "22:15",
+                "m_time": "14:00",
                 "pick": "1",
                 "country": "England",
                 "league": "England - Premier League",
-                "m_date": "2025-05-17",
+                "m_date": "2025-05-21",
                 "home_team": "Chelsea",
                 "away_team": "Manchester United",
                 "bet_odds": "",
                 "outcome": "",
-                "result": "-",
+                "result": "1 - 0",
                 "h_logo_path": "https://media.api-sports.io/football/teams/49.png",
                 "a_logo_path": "https://media.api-sports.io/football/teams/33.png",
                 "league_logo": "https://media.api-sports.io/football/leagues/39.png",
                 "fixture_id": "1208387",
-                "m_status": "NS"
+                "m_status": "HT"
             }
         ]
     }
 
 def filter_matches_by_date(data, target_date):
     """
-    Filters matches for the specified date.
+    Filters matches for the specified date, excluding 'NS' matches for today.
     Returns a list of matches for the target date.
     """
     if not data or "server_response" not in data:
         logging.warning("No server_response in data")
         return []
-    matches = [match for match in data["server_response"] if match["m_date"] == target_date]
-    logging.info(f"Found {len(matches)} matches for {target_date}")
+    # For today's matches, exclude those with m_status == "NS"
+    matches = [
+        match for match in data["server_response"]
+        if match["m_date"] == target_date and match.get("m_status") != "NS"
+    ]
+    logging.info(f"Found {len(matches)} non-NS matches for {target_date}")
     return matches
 
 def check_yesterday_results(matches):
     """
-    Checks the results of yesterday's matches.
-    Returns a congratulatory message if all or >80% of matches were won, else None.
+    Checks the results of yesterday's completed matches (m_status == 'FT').
+    Returns a congratulatory message if all or >=75% of matches were won, else None.
     """
     if not matches:
         logging.info("No matches found for yesterday")
         return None
     
-    # Log all match outcomes for debugging
-    for match in matches:
-        logging.info(f"Match: {match.get('home_team', 'Unknown')} vs {match.get('away_team', 'Unknown')}, Outcome: {match.get('outcome', 'Unknown')}")
-    
-    # Only count matches that have outcomes (completed matches)
-    completed_matches = [match for match in matches if match.get("outcome")]
+    # Only consider completed matches (m_status == "FT")
+    completed_matches = [match for match in matches if match.get("m_status") == "FT"]
     if not completed_matches:
-        logging.info("No completed matches found for yesterday")
+        logging.info("No completed matches (FT) found for yesterday")
         return None
     
     total_matches = len(completed_matches)
     won_matches = sum(1 for match in completed_matches if match.get("outcome", "").lower() == "win")
-    
     win_percentage = (won_matches / total_matches) * 100 if total_matches > 0 else 0
     
     logging.info(f"Yesterday: {won_matches}/{total_matches} completed matches won ({win_percentage:.2f}%)")
@@ -260,7 +259,6 @@ def main():
             logging.error("Test message failed. Check bot permissions or CHANNEL_ID.")
             send_message("⚠️ Bot error: Cannot post to channel. Check permissions.")
             return
-    # In non-DEBUG mode, just log the start without testing permissions
     else:
         logging.info("Running in production mode, skipping test message")
 
@@ -284,7 +282,7 @@ def main():
     if congrats_message:
         message_parts.append(congrats_message + "\n\n")
     if not todays_matches:
-        message_parts.append(f"⚽ No matches scheduled for today ({today}). Check back tomorrow! ⚽")
+        message_parts.append(f"⚽ No matches scheduled or started for today ({today}). Check back tomorrow! ⚽")
     else:
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
         formatted_matches = [format_match(match) for match in selected_matches]

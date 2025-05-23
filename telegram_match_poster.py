@@ -6,6 +6,7 @@ import time
 import random
 import logging
 import os
+import schedule
 
 # Configure logging
 logging.basicConfig(
@@ -19,7 +20,6 @@ logging.getLogger().addHandler(logging.StreamHandler())  # Log to console for Ra
 API_URL = os.getenv("API_URL")  # e.g., https://surebetsapp.com/app_json_scrits/json_toppicks.php
 BOT_TOKEN = os.getenv("BOT_TOKEN")  # e.g., 589590135:AAG535MoncA24m_4EdDLHlPGg...
 CHANNEL_ID = os.getenv("CHANNEL_ID")  # e.g., -1001247200123
-INTERVAL = 86400  # 24 hours for daily posts
 MORE_MATCHES_LINK = "https://groups.google.com/u/0/g/ai-scorecast"
 DEBUG_MODE = os.getenv("DEBUG_MODE", "False").lower() == "true"
 EAT = timezone('Africa/Nairobi')  # East Africa Time
@@ -153,7 +153,7 @@ def filter_matches_by_date(data, target_date):
         logging.warning("No server_response in data")
         return []
     
-    now_eat = datetime.now(timezone('Africa/Nairobi'))
+    now_eat = datetime.now(EAT)
     today = now_eat.strftime("%Y-%m-%d")
     
     # Different filter logic based on whether it's today or a past date
@@ -260,11 +260,11 @@ def test_bot_permissions():
     logging.info("Testing bot permissions")
     return send_message(test_message)
 
-def main():
+def main_job():
     """
     Main function to check yesterday's results, fetch, filter, and post matches.
     """
-    logging.info("Starting main function")
+    logging.info("Starting scheduled job at: " + datetime.now(EAT).strftime("%Y-%m-%d %H:%M:%S"))
     if not validate_env_vars():
         send_message("⚠️ Bot error: Missing environment variables. Contact admin.")
         return
@@ -314,11 +314,25 @@ def main():
 
 if __name__ == "__main__":
     logging.info("Bot started")
+    
+    # First, install the schedule library if not installed
     try:
-        main()  # Run immediately
-        while True:
-            time.sleep(INTERVAL)
-            main()
-    except Exception as e:
-        logging.error(f"Main loop error: {e}")
-        time.sleep(60)
+        import schedule
+    except ImportError:
+        logging.error("Schedule library not installed. Installing now...")
+        os.system("pip install schedule")
+        import schedule
+    
+    # Schedule the job to run at 8:00 AM EAT every day
+    schedule.every().day.at("08:00").do(main_job)
+    logging.info("Bot scheduled to run daily at 08:00 AM EAT")
+    
+    # Run immediately if in debug mode
+    if DEBUG_MODE:
+        logging.info("Debug mode active, running job immediately")
+        main_job()
+    
+    # Keep the script running and check for scheduled jobs
+    while True:
+        schedule.run_pending()
+        time.sleep(60)  # Check every minute

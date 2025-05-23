@@ -144,18 +144,34 @@ def get_fallback_data():
 
 def filter_matches_by_date(data, target_date):
     """
-    Filters matches for the specified date, excluding 'NS' matches for today.
+    Filters matches for the specified date.
+    For today, includes only not started matches.
+    For past dates, includes all matches.
     Returns a list of matches for the target date.
     """
     if not data or "server_response" not in data:
         logging.warning("No server_response in data")
         return []
-    # For today's matches, include only those with m_status == "NS"
-    matches = [
-        match for match in data["server_response"]
-        if match["m_date"] == target_date and match.get("m_status") == "NS"
-    ]
-    logging.info(f"Found {len(matches)} non-NS matches for {target_date}")
+    
+    now_eat = datetime.now(timezone('Africa/Nairobi'))
+    today = now_eat.strftime("%Y-%m-%d")
+    
+    # Different filter logic based on whether it's today or a past date
+    if target_date == today:
+        # For today's matches, include only those not started
+        matches = [
+            match for match in data["server_response"]
+            if match["m_date"] == target_date and match.get("m_status") == "NS"
+        ]
+        logging.info(f"Found {len(matches)} not started matches for today ({target_date})")
+    else:
+        # For past dates, include all matches regardless of status
+        matches = [
+            match for match in data["server_response"]
+            if match["m_date"] == target_date
+        ]
+        logging.info(f"Found {len(matches)} matches for {target_date}")
+    
     return matches
 
 def check_yesterday_results(matches):

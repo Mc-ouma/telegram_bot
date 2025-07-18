@@ -189,6 +189,22 @@ If migrating from the previous schedule-based implementation:
 3. **Activate n8n workflow**: Enable the workflow to take over scheduling
 4. **Monitor transition**: Verify successful execution for several days
 
+### Legacy Compatibility
+
+For platforms that require continuous execution (Railway, Heroku, etc.), a legacy compatibility script is provided:
+
+```bash
+# Use legacy scheduler if needed for backward compatibility
+python legacy_scheduler.py
+```
+
+Update your `Procfile` if using legacy mode:
+```
+worker: python legacy_scheduler.py
+```
+
+**Note**: The legacy scheduler is provided for backward compatibility only. New deployments should use the n8n workflow approach for better reliability and resource efficiency.
+
 ## Security Considerations
 
 1. **Environment Variables**: Never commit actual credentials to version control

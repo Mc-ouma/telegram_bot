@@ -263,6 +263,7 @@ def test_bot_permissions():
 def main_job():
     """
     Main function to check yesterday's results, fetch, filter, and post matches.
+    Sends separate messages for each match instead of combining them.
     """
     logging.info("Starting scheduled job at: " + datetime.now(EAT).strftime("%Y-%m-%d %H:%M:%S"))
     if not validate_env_vars():
@@ -294,23 +295,45 @@ def main_job():
 
     todays_matches = filter_matches_by_date(json_data, today)
     
-    message_parts = []
+    # Send congratulatory message first if available
     if congrats_message:
-        message_parts.append(congrats_message + "\n\n")
+        if not send_message(congrats_message):
+            logging.error("Failed to post congratulatory message")
+        time.sleep(2)  # Rate limiting between messages
+    
+    # Handle today's matches
     if not todays_matches:
-        message_parts.append(f"⚽ No matches scheduled or started for today ({today}). Check back tomorrow! ⚽")
+        no_matches_message = f"⚽ No matches scheduled or started for today ({today}). Check back tomorrow! ⚽"
+        if not send_message(no_matches_message):
+            logging.error("Failed to post no matches message")
     else:
         selected_matches = random.sample(todays_matches, min(3, len(todays_matches)))
-        formatted_matches = [format_match(match) for match in selected_matches]
-        message_parts.append(
-            f"⚽ **Today's Top Matches ({today})** ⚽\n\n"
-            + "\n\n".join(formatted_matches)
-            + f"\n\n🔗 [Check More Matches]({MORE_MATCHES_LINK})"
-        )
-
-    message = "".join(message_parts)
-    if not send_message(message):
-        logging.error("Failed to post daily message")
+        
+        # Send header message
+        header_message = f"⚽ **Today's Top Matches ({today})** ⚽"
+        if not send_message(header_message):
+            logging.error("Failed to post header message")
+            return
+        
+        time.sleep(2)  # Rate limiting between messages
+        
+        # Send individual match messages
+        for i, match in enumerate(selected_matches, 1):
+            match_message = format_match(match)
+            if not send_message(match_message):
+                logging.error(f"Failed to post match {i} message")
+            else:
+                logging.info(f"Successfully posted match {i}/{len(selected_matches)}: {match['home_team']} vs {match['away_team']}")
+            
+            # Rate limiting between messages (avoid hitting Telegram API limits)
+            if i < len(selected_matches):  # Don't sleep after the last message
+                time.sleep(2)
+        
+        # Send footer message with link
+        time.sleep(2)  # Rate limiting before footer
+        footer_message = f"🔗 [Check More Matches]({MORE_MATCHES_LINK})"
+        if not send_message(footer_message):
+            logging.error("Failed to post footer message")
 
 if __name__ == "__main__":
     logging.info("Bot started")

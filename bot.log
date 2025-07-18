@@ -1,0 +1,19 @@
+2025-07-18 12:50:12,890 INFO: Bot started
+2025-07-18 12:50:12,890 INFO: Starting scheduled job at: 2025-07-18 15:50:12
+2025-07-18 12:50:12,890 ERROR: Missing environment variables: API_URL, BOT_TOKEN, CHANNEL_ID
+2025-07-18 12:50:12,890 ERROR: BOT_TOKEN or CHANNEL_ID not set
+2025-07-18 12:50:12,890 INFO: Bot execution completed
+2025-07-18 12:50:26,724 INFO: Bot started
+2025-07-18 12:50:26,724 INFO: Starting scheduled job at: 2025-07-18 15:50:26
+2025-07-18 12:50:26,725 ERROR: Missing environment variables: API_URL
+2025-07-18 12:50:26,726 DEBUG: Starting new HTTPS connection (1): api.telegram.org:443
+2025-07-18 12:50:26,728 ERROR: Error sending message to Telegram: HTTPSConnectionPool(host='api.telegram.org', port=443): Max retries exceeded with url: /bottest/sendMessage (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7f78f6a82480>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+2025-07-18 12:50:26,728 INFO: Bot execution completed
+2025-07-18 12:51:02,378 WARNING: Using fallback JSON data
+2025-07-18 12:51:02,378 INFO: Found 1 matches for 2025-05-20
+2025-07-18 12:51:02,378 INFO: Found 3 matches for 2025-05-21
+2025-07-18 12:51:02,378 INFO: Yesterday: 1/1 completed matches won (100.00%)
+2025-07-18 12:51:02,378 ERROR: Missing environment variables: API_URL, BOT_TOKEN, CHANNEL_ID
+2025-07-18 12:51:02,378 ERROR: Missing environment variables: API_URL, BOT_TOKEN, CHANNEL_ID
+2025-07-18 12:51:19,458 WARNING: Using fallback JSON data
+2025-07-18 12:51:19,459 INFO: Found 3 matches for 2025-05-21

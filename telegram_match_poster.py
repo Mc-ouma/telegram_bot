@@ -2,11 +2,9 @@ import requests
 import json
 from datetime import datetime, timedelta
 from pytz import timezone
-import time
 import random
 import logging
 import os
-import schedule
 
 # Configure logging
 logging.basicConfig(
@@ -315,24 +313,6 @@ def main_job():
 if __name__ == "__main__":
     logging.info("Bot started")
     
-    # First, install the schedule library if not installed
-    try:
-        import schedule
-    except ImportError:
-        logging.error("Schedule library not installed. Installing now...")
-        os.system("pip install schedule")
-        import schedule
-    
-    # Schedule the job to run at 8:00 AM EAT every day
-    schedule.every().day.at("08:00").do(main_job)
-    logging.info("Bot scheduled to run daily at 08:00 AM EAT")
-    
-    # Run immediately if in debug mode
-    if DEBUG_MODE:
-        logging.info("Debug mode active, running job immediately")
-        main_job()
-    
-    # Keep the script running and check for scheduled jobs
-    while True:
-        schedule.run_pending()
-        time.sleep(60)  # Check every minute
+    # Run the main job
+    main_job()
+    logging.info("Bot execution completed")

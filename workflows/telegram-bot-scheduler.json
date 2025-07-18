@@ -1,0 +1,184 @@
+{
+  "meta": {
+    "instanceId": "telegram-bot-scheduler"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "cronExpression": "0 5 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        260,
+        240
+      ],
+      "webhookId": "",
+      "cronExpression": "0 5 * * *"
+    },
+    {
+      "parameters": {
+        "command": "cd /app && python telegram_match_poster.py",
+        "options": {
+          "env": {
+            "API_URL": "={{ $env.API_URL }}",
+            "BOT_TOKEN": "={{ $env.BOT_TOKEN }}",
+            "CHANNEL_ID": "={{ $env.CHANNEL_ID }}",
+            "DEBUG_MODE": "={{ $env.DEBUG_MODE || 'False' }}"
+          }
+        }
+      },
+      "id": "execute-script",
+      "name": "Execute Telegram Bot Script",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        480,
+        240
+      ],
+      "continueOnFail": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $node['Execute Telegram Bot Script'].json.exitCode }}",
+              "operation": "equal",
+              "value2": "0"
+            }
+          ]
+        }
+      },
+      "id": "check-execution-status",
+      "name": "Check Execution Status",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        700,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const executionData = $node['Execute Telegram Bot Script'].json;\nconst timestamp = new Date().toISOString();\nconst logEntry = {\n  timestamp: timestamp,\n  status: 'success',\n  exitCode: executionData.exitCode,\n  stdout: executionData.stdout,\n  stderr: executionData.stderr\n};\n\nconsole.log('Telegram Bot Execution Success:', JSON.stringify(logEntry, null, 2));\n\nreturn [{\n  json: {\n    message: 'Telegram bot executed successfully',\n    ...logEntry\n  }\n}];"
+      },
+      "id": "log-success",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        920,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const executionData = $node['Execute Telegram Bot Script'].json;\nconst timestamp = new Date().toISOString();\nconst logEntry = {\n  timestamp: timestamp,\n  status: 'error',\n  exitCode: executionData.exitCode,\n  stdout: executionData.stdout,\n  stderr: executionData.stderr\n};\n\nconsole.error('Telegram Bot Execution Failed:', JSON.stringify(logEntry, null, 2));\n\n// You can extend this to send notifications via email, Slack, etc.\n// For now, we'll just log the error\n\nreturn [{\n  json: {\n    message: 'Telegram bot execution failed',\n    error: true,\n    ...logEntry\n  }\n}];"
+      },
+      "id": "log-error",
+      "name": "Log Error & Handle Failure",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        920,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Manual trigger test - you can trigger this manually for testing\nconst timestamp = new Date().toISOString();\nconsole.log('Manual trigger activated at:', timestamp);\n\nreturn [{\n  json: {\n    message: 'Manual trigger activated',\n    timestamp: timestamp,\n    trigger_type: 'manual'\n  }\n}];"
+      },
+      "id": "manual-trigger",
+      "name": "Manual Trigger (Test)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute Telegram Bot Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger (Test)": {
+      "main": [
+        [
+          {
+            "node": "Execute Telegram Bot Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Telegram Bot Script": {
+      "main": [
+        [
+          {
+            "node": "Check Execution Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Execution Status": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Error & Handle Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "timezone": "Africa/Nairobi",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": {},
+  "tags": [
+    {
+      "createdAt": "2025-01-18T12:00:00.000Z",
+      "updatedAt": "2025-01-18T12:00:00.000Z",
+      "id": "telegram-automation",
+      "name": "telegram-automation"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-18T12:00:00.000Z",
+  "versionId": "1"
+}
